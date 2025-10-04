@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Resume sender/Customer Service * Pro Max</title>
+
+    <!-- Import CSS file -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="app">
+
+
+        <div class="top-bar">
+          
+            <h2 id="total"></h2>
+
+        </div>
+
+        <div class="module-collection">
+            
+            <div class="module">
+                <h4>Status</h4>
+                <p>for each 100h wasted you get 100dollar budget. working hours in company 10 000h</p>
+                <p>in world 10 000 000 000 000 h</p>
+                <div id="progressWrapper" style="width: 100%; background: #ddd; border-radius: 5px; margin-top: 10px;">
+                    <div id="progressBar"
+                        style="height: 20px; width: 0%; background: linear-gradient(90deg, #4caf50, #81c784); border-radius: 5px;">
+                    </div>
+                </div>
+                <p id="progressText">0%</p>
+
+            </div>
+
+            <div id="mailbox" class="module">
+                <h4>Mailbox</h4>
+
+                <div id="mailboxContainer" class="mailbox">
+                    <!-- Mails will be dynamically loaded from mails.json -->
+                </div>
+                <button id="mailSelectAllActionBtn" style="display: none;">Select All</button>
+                <button id="mailSelectBtn" disabled>Select 5...</button>
+                <button id="mailReplyBtn" style="display: none;">Reply all</button>
+                <button id="mailSyncBtn" disabled style="display: none;">Outlook synchronizing. 10...</button>
+            </div>
+
+
+            <div class="module">
+                <h4>Counters</h4>
+                <button id="addBtn">Smoke cigarettes</button>
+                <div id="counters"></div> <!-- all counters will appear here -->
+            </div>
+
+
+
+            <div id="upgrades" class="module">
+                <h4>Upgrades</h4>
+                <button id="upgradeStepBtn">Double Counter Speed</button>
+                <button id="upgradeSelectAllBtn">Select All Tool</button>
+                <button id="upgradeAutoMailBtn">Auto-Mail System</button>
+                <button id="upgradeInstantSyncBtn">Instant Sync</button>
+                <button id="upgradeCommOfficerBtn">Hire Communications Officer</button>
+            </div>
+
+            
+
+            <div class="module" id="counterModule">
+                <canvas id="counterChart" width="300" height="200"></canvas>
+                <div class="overlay">This chart shows value per minute</div>
+            </div>
+
+             <div class="module" id="overheadManager">
+                 <h4>Overhead Manager</h4>
+                <p>Your CEO wants a consultant proposal. Add stakeholders to increase scope creep!</p>
+
+                <div id="documentStatus">
+                    <p id="documentTitle">Best Practices Framework for Best Practices v1.2.3</p>
+                    <div id="signatureProgress"></div>
+                    <p id="documentInfo"></p>
+
+                    <div id="scopeCreepMeter">
+                        <p>Scope Creep: <span id="scopeCreepValue">0</span>%</p>
+                        <div style="width: 100%; background: #ddd; border-radius: 5px; height: 15px;">
+                            <div id="scopeCreepBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #ff9800, #f44336); border-radius: 5px;"></div>
+                        </div>
+                    </div>
+
+                    <p id="hoursWasted" style="display: none; font-weight: bold; color: red;"></p>
+                </div>
+
+                <button id="addStakeholderBtn">Add Stakeholder ($50)</button>
+            </div>
+
+            <div class="module" id="overhead-tracking">
+                 <h4>Global Overhead tracking</h4>
+                <p>Governments are implementing Overhead tracking systems. They have selected You to be the project manager...
+                Add polynomials to track overhead. 
+                Economic world forum event, 
+                Companies are required to have overhead departments.
+                </p>
+            </div>
+
+            <div class="module" id="wongame">
+                 <h4>You win.</h4>
+                <p>You've won. The world runs on
+  emails about emails. Nothing can
+  ever get done again. </p>
+            </div>
+
+        </div>
+
+
+    </div>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>
