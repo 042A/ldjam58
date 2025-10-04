@@ -1,6 +1,10 @@
 // -----------------------------
-// World Module - "Everyone CCs Everyone"
+// Module 3: World Overhead Task Force
 // -----------------------------
+
+import { BaseModule } from './modules/base-module';
+import { ModuleMetrics } from './types';
+import { CONFIG } from './config';
 
 interface AnimatedDot {
   progress: number; // 0-1 along the path
@@ -16,7 +20,7 @@ interface PathInfo {
   depth: number; // Track which level this path is on
 }
 
-export class WorldModule {
+export class WorldModule extends BaseModule {
   private isActive = false;
 
   // Core values
@@ -41,6 +45,8 @@ export class WorldModule {
   private lastUpdateTime = 0;
 
   constructor() {
+    super("world", false); // Locked initially
+
     this.mailsEl = document.getElementById("worldMails") as HTMLElement;
     this.contactsEl = document.getElementById("worldContacts") as HTMLElement;
     this.totalEl = document.getElementById("worldTotal") as HTMLElement;
@@ -53,12 +59,26 @@ export class WorldModule {
     if (!this.mailsEl || !this.contactsEl || !this.totalEl || !this.treeEl || !this.startBtn || !this.controlsEl) {
       throw new Error("Missing world module elements");
     }
+  }
 
+  public init(): void {
     this.startBtn.addEventListener("click", () => this.startModule());
     this.addMailBtn.addEventListener("click", () => this.addMail());
     this.addContactBtn.addEventListener("click", () => this.addContact());
 
     this.updateDisplay();
+  }
+
+  public update(deltaTime: number): void {
+    // World module uses requestAnimationFrame, not update loop
+  }
+
+  public getMetrics(): ModuleMetrics {
+    return {
+      name: "World",
+      primaryValue: Math.floor(this.totalEmailsSent * CONFIG.TOTAL_EMAILS_MULTIPLIER),
+      label: `Total emails sent: ${Math.floor(this.totalEmailsSent).toLocaleString()}`,
+    };
   }
 
   private startModule(): void {
@@ -312,5 +332,9 @@ export class WorldModule {
 
   public isRunning(): boolean {
     return this.isActive;
+  }
+
+  public getTotalEmailsSent(): number {
+    return this.totalEmailsSent;
   }
 }

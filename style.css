@@ -18,6 +18,11 @@
   position: relative; /* key: overlay stays inside this box */
 }
 
+/* Hide locked modules by default */
+.module.locked {
+  display: none;
+}
+
 
 
 /* blink effect */
