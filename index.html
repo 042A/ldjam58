@@ -21,18 +21,36 @@
 
         <div class="module-collection">
             
-            <div class="module">
-                <h4>Status</h4>
-                <p>for each 100h wasted you get 100dollar budget. working hours in company 10 000h</p>
-                <p>in world 10 000 000 000 000 h</p>
-                <div id="progressWrapper" style="width: 100%; background: #ddd; border-radius: 5px; margin-top: 10px;">
-                    <div id="progressBar"
-                        style="height: 20px; width: 0%; background: linear-gradient(90deg, #4caf50, #81c784); border-radius: 5px;">
+                   <div class="module" id="world">
+                <h4>Global Overhead Tracking</h4>
+                <p>CC everyone on everything.</p>
+
+                <div style="display: flex; gap: 20px; margin: 15px 0;">
+                    <div style="flex: 1;">
+                        <p style="font-size: 14px; margin-bottom: 5px;">Mails per second</p>
+                        <div id="worldMails" style="font-size: 48px; font-weight: bold; color: #ff6b6b;">0</div>
+                    </div>
+                    <div style="flex: 1;">
+                        <p style="font-size: 14px; margin-bottom: 5px;">Avg contacts per person</p>
+                        <div id="worldContacts" style="font-size: 48px; font-weight: bold; color: #4ecdc4;">0</div>
+                    </div>
+                    <div style="flex: 1;">
+                        <p style="font-size: 14px; margin-bottom: 5px;">Total emails sent</p>
+                        <div id="worldTotal" style="font-size: 48px; font-weight: bold; color: #ffd93d;">0</div>
                     </div>
                 </div>
-                <p id="progressText">0%</p>
 
+                <div id="worldTree" style="margin: 20px 0; height: 250px; position: relative; border: 2px solid #333; border-radius: 5px; overflow: hidden; background: #1a1a1a;">
+                </div>
+
+                <button id="worldBtn">Start Global Initiative</button>
+                <div id="worldControls" style="display: none; margin-top: 10px;">
+                    <button id="worldAddMail">+1 Mail/sec</button>
+                    <button id="worldAddContact">+1 Contact/person</button>
+                </div>
             </div>
+            
+         
 
             <div id="mailbox" class="module">
                 <h4>Mailbox</h4>
@@ -56,6 +74,18 @@
 
 
             <div id="upgrades" class="module">
+                <h4>Status</h4>
+                <p>for each 100h wasted you get 100dollar budget. working hours in company 10 000h</p>
+                <p>in world 10 000 000 000 000 h</p>
+                <div id="progressWrapper" style="width: 100%; background: #ddd; border-radius: 5px; margin-top: 10px;">
+                    <div id="progressBar"
+                        style="height: 20px; width: 0%; background: linear-gradient(90deg, #4caf50, #81c784); border-radius: 5px;">
+                    </div>
+                </div>
+                <p id="progressText">0%</p>
+
+
+                
                 <h4>Upgrades</h4>
                 <button id="upgradeStepBtn">Double Counter Speed</button>
                 <button id="upgradeSelectAllBtn">Select All Tool</button>
@@ -73,15 +103,15 @@
 
              <div class="module" id="overheadManager">
                  <h4>Overhead Manager</h4>
-                <p>Your CEO wants a consultant proposal. Add stakeholders to increase scope creep!</p>
+                <p>Company CEO wants you to make the company more effient.</p>
 
                 <div id="documentStatus">
-                    <p id="documentTitle">Best Practices Framework for Best Practices v1.2.3</p>
+                    <p id="documentTitle">Best practices framework for best practices v1.2.3</p>
                     <div id="signatureProgress"></div>
                     <p id="documentInfo"></p>
 
                     <div id="scopeCreepMeter">
-                        <p>Scope Creep: <span id="scopeCreepValue">0</span>%</p>
+                        <p>Scopecreep: <span id="scopeCreepValue">0</span>%</p>
                         <div style="width: 100%; background: #ddd; border-radius: 5px; height: 15px;">
                             <div id="scopeCreepBar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #ff9800, #f44336); border-radius: 5px;"></div>
                         </div>
@@ -90,17 +120,9 @@
                     <p id="hoursWasted" style="display: none; font-weight: bold; color: red;"></p>
                 </div>
 
-                <button id="addStakeholderBtn">Add Stakeholder ($50)</button>
+                <button id="addStakeholderBtn">+ Stakeholder ($5000)</button>
             </div>
-
-            <div class="module" id="overhead-tracking">
-                 <h4>Global Overhead tracking</h4>
-                <p>Governments are implementing Overhead tracking systems. They have selected You to be the project manager...
-                Add polynomials to track overhead. 
-                Economic world forum event, 
-                Companies are required to have overhead departments.
-                </p>
-            </div>
+     
 
             <div class="module" id="wongame">
                  <h4>You win.</h4>

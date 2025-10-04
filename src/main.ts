@@ -2,6 +2,7 @@
 // Imports
 // -----------------------------
 import mailsData from './mails.json';
+import { WorldModule } from './world';
 
 // -----------------------------
 // Types
@@ -44,10 +45,12 @@ const CONFIG = {
   UPGRADE_SELECT_ALL_COST: 750,
   // Consultant document config
   DOCUMENT_SIGNATURE_DELAY_MS: 400, // Fast signatures
-  ADD_STAKEHOLDER_COST: 50, // Lower cost to encourage adding
+  ADD_STAKEHOLDER_COST: 5000, // Lower cost to encourage adding
   SCOPE_CREEP_INCREMENT: 5, // How much scope creep increases per cycle
   SCOPE_CREEP_MAX: 100, // Max scope creep before something happens
   UPGRADE_COMM_OFFICER_BASE_COST: 500, // Starting cost for communication officer
+  // World modal config
+  WORLD_THRESHOLD: 100_000, // Overhead threshold to trigger world modal
 };
 
 // -----------------------------
@@ -555,7 +558,7 @@ function updateDocumentUI() {
 
   // Always show add stakeholder button
   UI.addStakeholderBtn.disabled = State.resources < CONFIG.ADD_STAKEHOLDER_COST;
-  UI.addStakeholderBtn.textContent = `Add Stakeholder ($${CONFIG.ADD_STAKEHOLDER_COST})`;
+  UI.addStakeholderBtn.textContent = `Add stakeholder ($${CONFIG.ADD_STAKEHOLDER_COST})`;
 
   // Update scope creep meter
   UI.scopeCreepValue.textContent = Math.floor(doc.scopeCreep).toString();
@@ -698,6 +701,11 @@ function renderMailbox() {
     UI.mailboxContainer.appendChild(mailItem);
   });
 }
+
+// -----------------------------
+// World Module Initialization
+// -----------------------------
+const worldModule = new WorldModule();
 
 // -----------------------------
 // Startup
