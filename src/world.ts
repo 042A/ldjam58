@@ -28,15 +28,18 @@ export class WorldModule extends BaseModule {
   private avgContactsPerPerson = 1;
   private totalEmailsSent = 0;
 
+  // OPM tracking
+  private lastOpmUpdate = Date.now();
+  private lastPrimaryValue = 0;
+  private currentOpm = 0;
+
   // UI elements
   private mailsEl: HTMLElement;
   private contactsEl: HTMLElement;
   private totalEl: HTMLElement;
   private treeEl: HTMLElement;
   private startBtn: HTMLButtonElement;
-  private controlsEl: HTMLElement;
-  private addMailBtn: HTMLButtonElement;
-  private addContactBtn: HTMLButtonElement;
+  private worldContent: HTMLElement;
 
   // Animation
   private animationFrame: number | null = null;
@@ -52,20 +55,15 @@ export class WorldModule extends BaseModule {
     this.totalEl = document.getElementById("worldTotal") as HTMLElement;
     this.treeEl = document.getElementById("worldTree") as HTMLElement;
     this.startBtn = document.getElementById("worldBtn") as HTMLButtonElement;
-    this.controlsEl = document.getElementById("worldControls") as HTMLElement;
-    this.addMailBtn = document.getElementById("worldAddMail") as HTMLButtonElement;
-    this.addContactBtn = document.getElementById("worldAddContact") as HTMLButtonElement;
+    this.worldContent = document.getElementById("worldContent") as HTMLElement;
 
-    if (!this.mailsEl || !this.contactsEl || !this.totalEl || !this.treeEl || !this.startBtn || !this.controlsEl) {
+    if (!this.mailsEl || !this.contactsEl || !this.totalEl || !this.treeEl || !this.startBtn || !this.worldContent) {
       throw new Error("Missing world module elements");
     }
   }
 
   public init(): void {
     this.startBtn.addEventListener("click", () => this.startModule());
-    this.addMailBtn.addEventListener("click", () => this.addMail());
-    this.addContactBtn.addEventListener("click", () => this.addContact());
-
     this.updateDisplay();
   }
 
@@ -74,10 +72,24 @@ export class WorldModule extends BaseModule {
   }
 
   public getMetrics(): ModuleMetrics {
+    const primaryValue = Math.floor(this.totalEmailsSent * CONFIG.TOTAL_EMAILS_MULTIPLIER);
+
+    // Calculate OPM
+    const now = Date.now();
+    const deltaMinutes = (now - this.lastOpmUpdate) / 60000;
+    if (deltaMinutes >= 0.1) { // Update every 6 seconds
+      const deltaValue = primaryValue - this.lastPrimaryValue;
+      this.currentOpm = deltaValue / deltaMinutes;
+      this.lastOpmUpdate = now;
+      this.lastPrimaryValue = primaryValue;
+    }
+
     return {
       name: "World",
-      primaryValue: Math.floor(this.totalEmailsSent * CONFIG.TOTAL_EMAILS_MULTIPLIER),
+      primaryValue,
       label: `Total emails sent: ${Math.floor(this.totalEmailsSent).toLocaleString()}`,
+      opm: this.currentOpm,
+      multiplier: CONFIG.TOTAL_EMAILS_MULTIPLIER,
     };
   }
 
@@ -86,16 +98,23 @@ export class WorldModule extends BaseModule {
 
     this.isActive = true;
     this.startBtn.style.display = 'none';
-    this.controlsEl.style.display = 'block';
+    this.worldContent.style.display = 'block';
+
+    // Show world upgrades
+    const worldMailRow = document.getElementById('upgradeWorldMailRow');
+    const worldContactRow = document.getElementById('upgradeWorldContactRow');
+    if (worldMailRow) worldMailRow.style.display = 'table-row';
+    if (worldContactRow) worldContactRow.style.display = 'table-row';
+
     this.animate();
   }
 
-  private addMail(): void {
+  public addMail(): void {
     this.mailsPerSecond++;
     this.updateDisplay();
   }
 
-  private addContact(): void {
+  public addContact(): void {
     this.avgContactsPerPerson++;
     this.updateDisplay();
   }

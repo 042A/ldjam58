@@ -7,7 +7,6 @@ import { CONFIG } from './config';
 import { $ } from './utils/helpers';
 import { clamp } from './utils/helpers';
 import { DebugManager } from './utils/debug';
-import { Counter } from './systems/counter-system';
 import { ChartSystem } from './systems/chart-system';
 import { MailboxModule } from './modules/mailbox';
 import { CorporationModule } from './modules/corporation';
@@ -19,16 +18,20 @@ import { gameState } from './state';
 // -----------------------------
 const UI = {
   totalEl: $<HTMLHeadingElement>("total"),
-  buyBtn: $<HTMLButtonElement>("addBtn"),
-  countersContainer: $<HTMLDivElement>("counters"),
   progressBar: $<HTMLDivElement>("progressBar"),
   progressText: $<HTMLParagraphElement>("progressText"),
-  upgradeStepBtn: $<HTMLButtonElement>("upgradeStepBtn"),
-  upgradeSelectAllBtn: $<HTMLButtonElement>("upgradeSelectAllBtn"),
   upgradeAutoMailBtn: $<HTMLButtonElement>("upgradeAutoMailBtn"),
+  upgradeFasterAutoMailBtn: $<HTMLButtonElement>("upgradeFasterAutoMailBtn"),
   upgradeInstantSyncBtn: $<HTMLButtonElement>("upgradeInstantSyncBtn"),
+  upgradeIncreaseMailboxBtn: $<HTMLButtonElement>("upgradeIncreaseMailboxBtn"),
+  upgradeDoubleMailboxBtn: $<HTMLButtonElement>("upgradeDoubleMailboxBtn"),
+  upgradeStakeholderBtn: $<HTMLButtonElement>("upgradeStakeholderBtn"),
+  upgradeDoubleCorporationBtn: $<HTMLButtonElement>("upgradeDoubleCorporationBtn"),
   upgradeCommOfficerBtn: $<HTMLButtonElement>("upgradeCommOfficerBtn"),
+  upgradeWorldMailBtn: $<HTMLButtonElement>("upgradeWorldMailBtn"),
+  upgradeWorldContactBtn: $<HTMLButtonElement>("upgradeWorldContactBtn"),
   ctx: $<HTMLCanvasElement>("counterChart"),
+  moduleStatsBody: $<HTMLTableSectionElement>("moduleStatsBody"),
 };
 
 // -----------------------------
@@ -60,13 +63,28 @@ function checkModuleUnlocks(overhead: number): void {
     worldModule.unlock();
   }
 
-  // Show win module
+  // Show win module and hide all other modules
   if (!gameState.isWinModuleShown() && overhead >= CONFIG.WIN_THRESHOLD) {
     gameState.setWinModuleShown(true);
     const winModule = document.getElementById("module-win");
     if (winModule) {
       winModule.classList.remove("locked");
       console.log("You win!");
+
+      // Hide all other modules
+      const mailbox = document.getElementById("mailbox");
+      const corporation = document.getElementById("overheadManager");
+      const world = document.getElementById("world");
+      const counterModule = document.getElementById("counterModule");
+      const upgrades = document.getElementById("upgrades");
+      const progressModule = document.getElementById("progressModule");
+
+      if (mailbox) mailbox.style.display = 'none';
+      if (corporation) corporation.style.display = 'none';
+      if (world) world.style.display = 'none';
+      if (counterModule) counterModule.style.display = 'none';
+      if (upgrades) upgrades.style.display = 'none';
+      if (progressModule) progressModule.style.display = 'none';
     }
   }
 }
@@ -110,10 +128,33 @@ function computeOutputValue(): number {
   const corporationMetrics = corporationModule.getMetrics();
   const worldMetrics = worldModule.getMetrics();
 
-  // Old counter system (will be phased out)
-  const oldCounters = gameState.getCounters().reduce((s, c) => s + c.getValue(), 0);
+  return mailboxMetrics.primaryValue + corporationMetrics.primaryValue + worldMetrics.primaryValue;
+}
 
-  return mailboxMetrics.primaryValue + corporationMetrics.primaryValue + worldMetrics.primaryValue + oldCounters;
+// -----------------------------
+// Module Stats Table Rendering
+// -----------------------------
+function renderModuleStats(): void {
+  const mailboxMetrics = mailboxModule.getMetrics();
+  const corporationMetrics = corporationModule.getMetrics();
+  const worldMetrics = worldModule.getMetrics();
+
+  const allMetrics = [mailboxMetrics, corporationMetrics, worldMetrics];
+
+  UI.moduleStatsBody.innerHTML = allMetrics.map(metrics => {
+    const opm = metrics.opm !== undefined ? Math.floor(metrics.opm).toLocaleString() : '0';
+    const mult = metrics.multiplier !== undefined ? `${metrics.multiplier}x` : '1x';
+    const totalHours = Math.floor(metrics.primaryValue).toLocaleString();
+
+    return `
+      <tr style="border-bottom: 1px solid #444;">
+        <td style="padding: 8px;">${metrics.name}</td>
+        <td style="text-align: right; padding: 8px;">${totalHours}</td>
+        <td style="text-align: right; padding: 8px;">${opm}</td>
+        <td style="text-align: right; padding: 8px;">${mult}</td>
+      </tr>
+    `;
+  }).join('');
 }
 
 // -----------------------------
@@ -123,27 +164,34 @@ function renderUI(): number {
   const outputValue = computeOutputValue();
   gameState.setOutputValue(outputValue);
 
-  UI.totalEl.textContent = `Overhead: ${Math.floor(outputValue)}h | Your budget: $${Math.floor(gameState.getResources())}`;
+  UI.totalEl.textContent = `Total overhead: ${Math.floor(outputValue)}h | Money: $${Math.floor(gameState.getMoney())}`;
   updateProgress(outputValue);
+  renderModuleStats();
 
   // Check for module unlocks
   checkModuleUnlocks(outputValue);
 
-  // Update button text with cost
-  UI.buyBtn.textContent = `Buy Counter (${CONFIG.COUNTER_COST} resources)`;
-  UI.buyBtn.disabled = gameState.getResources() < CONFIG.COUNTER_COST;
+  // Show/hide upgrades based on overhead thresholds
+  const autoMailRow = document.getElementById("upgradeAutoMailRow");
+  const fasterAutoMailRow = document.getElementById("upgradeFasterAutoMailRow");
+  const instantSyncRow = document.getElementById("upgradeInstantSyncRow");
+  const doubleMailboxRow = document.getElementById("upgradeDoubleMailboxRow");
+  const increaseMailboxRow = document.getElementById("upgradeIncreaseMailboxRow");
 
-  // Update upgrade button
-  UI.upgradeStepBtn.textContent = `Double Counter Speed (${CONFIG.UPGRADE_STEP_COST} resources) [x${gameState.getStepMultiplier()}]`;
-  UI.upgradeStepBtn.disabled = gameState.getResources() < CONFIG.UPGRADE_STEP_COST;
-
-  // Update select-all upgrade button
-  if (mailboxModule.isSelectAllPurchased()) {
-    UI.upgradeSelectAllBtn.textContent = "Select All: Active";
-    UI.upgradeSelectAllBtn.disabled = true;
-  } else {
-    UI.upgradeSelectAllBtn.textContent = `Select All Tool (${CONFIG.UPGRADE_SELECT_ALL_COST} resources)`;
-    UI.upgradeSelectAllBtn.disabled = gameState.getResources() < CONFIG.UPGRADE_SELECT_ALL_COST;
+  if (autoMailRow) {
+    autoMailRow.style.display = outputValue >= CONFIG.UPGRADE_AUTO_MAIL_THRESHOLD ? '' : 'none';
+  }
+  if (fasterAutoMailRow) {
+    fasterAutoMailRow.style.display = outputValue >= CONFIG.UPGRADE_FASTER_AUTO_MAIL_THRESHOLD ? '' : 'none';
+  }
+  if (instantSyncRow) {
+    instantSyncRow.style.display = outputValue >= CONFIG.UPGRADE_INSTANT_SYNC_THRESHOLD ? '' : 'none';
+  }
+  if (doubleMailboxRow) {
+    doubleMailboxRow.style.display = outputValue >= CONFIG.UPGRADE_DOUBLE_MAILBOX_THRESHOLD ? '' : 'none';
+  }
+  if (increaseMailboxRow) {
+    increaseMailboxRow.style.display = outputValue >= CONFIG.UPGRADE_INCREASE_MAILBOX_THRESHOLD ? '' : 'none';
   }
 
   // Update auto-mail upgrade button
@@ -151,8 +199,17 @@ function renderUI(): number {
     UI.upgradeAutoMailBtn.textContent = "Auto-Mail: Active";
     UI.upgradeAutoMailBtn.disabled = true;
   } else {
-    UI.upgradeAutoMailBtn.textContent = `Auto-Mail System (${CONFIG.UPGRADE_AUTO_MAIL_COST} resources)`;
-    UI.upgradeAutoMailBtn.disabled = gameState.getResources() < CONFIG.UPGRADE_AUTO_MAIL_COST;
+    UI.upgradeAutoMailBtn.textContent = `Auto-Mail System ($${CONFIG.UPGRADE_AUTO_MAIL_COST})`;
+    UI.upgradeAutoMailBtn.disabled = gameState.getMoney() < CONFIG.UPGRADE_AUTO_MAIL_COST;
+  }
+
+  // Update faster auto-mail upgrade button
+  if (mailboxModule.isFasterAutoMailPurchased()) {
+    UI.upgradeFasterAutoMailBtn.textContent = "Faster Auto-Mail: Active";
+    UI.upgradeFasterAutoMailBtn.disabled = true;
+  } else {
+    UI.upgradeFasterAutoMailBtn.textContent = `Faster Auto-Mail ($${CONFIG.UPGRADE_FASTER_AUTO_MAIL_COST})`;
+    UI.upgradeFasterAutoMailBtn.disabled = gameState.getMoney() < CONFIG.UPGRADE_FASTER_AUTO_MAIL_COST;
   }
 
   // Update instant-sync upgrade button
@@ -160,14 +217,43 @@ function renderUI(): number {
     UI.upgradeInstantSyncBtn.textContent = "Instant Sync: Active";
     UI.upgradeInstantSyncBtn.disabled = true;
   } else {
-    UI.upgradeInstantSyncBtn.textContent = `Instant Sync (${CONFIG.UPGRADE_INSTANT_SYNC_COST} resources)`;
-    UI.upgradeInstantSyncBtn.disabled = gameState.getResources() < CONFIG.UPGRADE_INSTANT_SYNC_COST;
+    UI.upgradeInstantSyncBtn.textContent = `Instant Sync ($${CONFIG.UPGRADE_INSTANT_SYNC_COST})`;
+    UI.upgradeInstantSyncBtn.disabled = gameState.getMoney() < CONFIG.UPGRADE_INSTANT_SYNC_COST;
   }
+
+  // Update increase mailbox upgrade button
+  if (mailboxModule.isIncreaseMailboxPurchased()) {
+    UI.upgradeIncreaseMailboxBtn.textContent = "Mailbox Size: 10 Emails";
+    UI.upgradeIncreaseMailboxBtn.disabled = true;
+  } else {
+    UI.upgradeIncreaseMailboxBtn.textContent = `Increase Mailbox to 10 Emails ($${CONFIG.UPGRADE_INCREASE_MAILBOX_COST})`;
+    UI.upgradeIncreaseMailboxBtn.disabled = gameState.getMoney() < CONFIG.UPGRADE_INCREASE_MAILBOX_COST;
+  }
+
+  // Update double mailbox upgrade button
+  const doubleMailboxCost = mailboxModule.getDoubleMailboxCost();
+  const doubleMailboxCount = mailboxModule.getDoubleMailboxCount();
+  UI.upgradeDoubleMailboxBtn.textContent = `Double Mailbox Output ($${doubleMailboxCost}) [${doubleMailboxCount}x]`;
+  UI.upgradeDoubleMailboxBtn.disabled = gameState.getMoney() < doubleMailboxCost;
+
+  // Update stakeholder upgrade button
+  UI.upgradeStakeholderBtn.textContent = `Add Stakeholder ($${CONFIG.ADD_STAKEHOLDER_COST})`;
+  UI.upgradeStakeholderBtn.disabled = gameState.getMoney() < CONFIG.ADD_STAKEHOLDER_COST;
+
+  // Update double corporation upgrade button
+  const doubleCorporationCost = corporationModule.getDoubleCorporationCost();
+  const doubleCorporationCount = corporationModule.getDoubleCorporationCount();
+  UI.upgradeDoubleCorporationBtn.textContent = `Double Corporation Output ($${doubleCorporationCost}) [${doubleCorporationCount}x]`;
+  UI.upgradeDoubleCorporationBtn.disabled = gameState.getMoney() < doubleCorporationCost;
 
   // Update communication officer upgrade button
   const commOfficerCost = corporationModule.getCommOfficerCost();
   UI.upgradeCommOfficerBtn.textContent = `Hire Comm Officer ($${commOfficerCost}) [${corporationModule.getCommOfficerCount()}x, ${corporationModule.getDocumentSpeedMultiplier()}x speed]`;
-  UI.upgradeCommOfficerBtn.disabled = gameState.getResources() < commOfficerCost;
+  UI.upgradeCommOfficerBtn.disabled = gameState.getMoney() < commOfficerCost;
+
+  // Update world upgrades (no cost tracking needed, they're free actions)
+  UI.upgradeWorldMailBtn.textContent = `+1 Mail/sec`;
+  UI.upgradeWorldContactBtn.textContent = `+1 Contact/person`;
 
   return outputValue;
 }
@@ -175,77 +261,89 @@ function renderUI(): number {
 // -----------------------------
 // Upgrade Actions
 // -----------------------------
-function tryBuyCounter(): void {
-  if (gameState.spendResources(CONFIG.COUNTER_COST)) {
-    const currentStep = CONFIG.COUNTER_BASE_STEP * gameState.getStepMultiplier();
-    gameState.addCounter(new Counter(UI.countersContainer, currentStep));
-    renderUI();
-  } else {
-    alert("Not enough resources!");
-  }
-}
-
-function tryUpgradeStep(): void {
-  if (gameState.spendResources(CONFIG.UPGRADE_STEP_COST)) {
-    gameState.doubleStepMultiplier();
-
-    // Update all existing counters to the new step
-    gameState.getCounters().forEach(counter => {
-      counter.updateStep(CONFIG.COUNTER_BASE_STEP * gameState.getStepMultiplier());
-    });
-
-    renderUI();
-  } else {
-    alert("Not enough resources!");
-  }
-}
-
-function tryUpgradeSelectAll(): void {
-  if (mailboxModule.purchaseSelectAll(gameState.getResources())) {
-    renderUI();
-  } else {
-    alert("Not enough resources!");
-  }
-}
-
 function tryUpgradeAutoMail(): void {
-  if (mailboxModule.purchaseAutoMail(gameState.getResources())) {
+  if (mailboxModule.purchaseAutoMail(gameState.getMoney())) {
     renderUI();
   } else {
-    alert("Not enough resources!");
+    alert("Not enough money!");
+  }
+}
+
+function tryUpgradeFasterAutoMail(): void {
+  if (mailboxModule.purchaseFasterAutoMail(gameState.getMoney())) {
+    renderUI();
+  } else {
+    alert("Not enough money!");
   }
 }
 
 function tryUpgradeInstantSync(): void {
-  if (mailboxModule.purchaseInstantSync(gameState.getResources())) {
+  if (mailboxModule.purchaseInstantSync(gameState.getMoney())) {
     renderUI();
   } else {
-    alert("Not enough resources!");
+    alert("Not enough money!");
+  }
+}
+
+function tryUpgradeIncreaseMailbox(): void {
+  if (mailboxModule.purchaseIncreaseMailbox(gameState.getMoney())) {
+    renderUI();
+  } else {
+    alert("Not enough money!");
+  }
+}
+
+function tryUpgradeDoubleMailbox(): void {
+  if (mailboxModule.purchaseDoubleMailbox(gameState.getMoney())) {
+    renderUI();
+  } else {
+    alert("Not enough money!");
+  }
+}
+
+function tryUpgradeStakeholder(): void {
+  if (corporationModule.purchaseStakeholder(gameState.getMoney())) {
+    renderUI();
+  } else {
+    alert("Not enough money!");
+  }
+}
+
+function tryUpgradeDoubleCorporation(): void {
+  if (corporationModule.purchaseDoubleCorporation(gameState.getMoney())) {
+    renderUI();
+  } else {
+    alert("Not enough money!");
   }
 }
 
 function tryUpgradeCommOfficer(): void {
-  if (corporationModule.purchaseCommOfficer(gameState.getResources())) {
+  if (corporationModule.purchaseCommOfficer(gameState.getMoney())) {
     renderUI();
   } else {
-    alert("Not enough resources!");
+    alert("Not enough money!");
   }
+}
+
+function tryUpgradeWorldMail(): void {
+  worldModule.addMail();
+  renderUI();
+}
+
+function tryUpgradeWorldContact(): void {
+  worldModule.addContact();
+  renderUI();
 }
 
 // -----------------------------
 // Debug System Setup
 // -----------------------------
-debugManager.onBoostResources(() => {
-  gameState.addResources(9_999_999_999_999);
+debugManager.onBoostMoney(() => {
+  gameState.addMoney(9_999_999_999_999);
   renderUI();
 });
 
 debugManager.onToggle((enabled) => {
-  const counterModule = document.getElementById("counterModule");
-  if (counterModule) {
-    counterModule.style.display = enabled ? "block" : "none";
-  }
-
   if (enabled) {
     console.log("Debug commands available:");
     console.log("- Click Module 2 header to unlock Corporation");
@@ -273,25 +371,34 @@ debugManager.onToggle((enabled) => {
   }
 });
 
-// Hide counter module by default (only show in debug mode)
-const counterModule = document.getElementById("counterModule");
-if (counterModule) {
-  counterModule.style.display = "none";
+// -----------------------------
+// Add Overhead Button
+// -----------------------------
+const addOverheadBtn = document.getElementById("addOverheadBtn");
+if (addOverheadBtn) {
+  addOverheadBtn.addEventListener("click", () => {
+    mailboxModule.addOverhead(200000);
+    renderUI();
+  });
 }
 
 // -----------------------------
 // Event Listeners
 // -----------------------------
-UI.buyBtn.addEventListener("click", tryBuyCounter);
-UI.upgradeStepBtn.addEventListener("click", tryUpgradeStep);
-UI.upgradeSelectAllBtn.addEventListener("click", tryUpgradeSelectAll);
 UI.upgradeAutoMailBtn.addEventListener("click", tryUpgradeAutoMail);
+UI.upgradeFasterAutoMailBtn.addEventListener("click", tryUpgradeFasterAutoMail);
 UI.upgradeInstantSyncBtn.addEventListener("click", tryUpgradeInstantSync);
+UI.upgradeIncreaseMailboxBtn.addEventListener("click", tryUpgradeIncreaseMailbox);
+UI.upgradeDoubleMailboxBtn.addEventListener("click", tryUpgradeDoubleMailbox);
+UI.upgradeStakeholderBtn.addEventListener("click", tryUpgradeStakeholder);
+UI.upgradeDoubleCorporationBtn.addEventListener("click", tryUpgradeDoubleCorporation);
 UI.upgradeCommOfficerBtn.addEventListener("click", tryUpgradeCommOfficer);
+UI.upgradeWorldMailBtn.addEventListener("click", tryUpgradeWorldMail);
+UI.upgradeWorldContactBtn.addEventListener("click", tryUpgradeWorldContact);
 
-// Wire up module resource callbacks
-mailboxModule.setOnResourceChange((amount) => gameState.addResources(amount));
-corporationModule.setOnResourceChange((amount) => gameState.addResources(amount));
+// Wire up module money callbacks
+mailboxModule.setOnMoneyChange((amount) => gameState.addMoney(amount));
+corporationModule.setOnMoneyChange((amount) => gameState.addMoney(amount));
 
 // -----------------------------
 // Game Start

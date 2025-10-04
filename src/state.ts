@@ -11,7 +11,7 @@ class StateManager {
     // Legacy counter system (to be removed)
     counters: [],
     outputValue: 0,
-    resources: CONFIG.STARTING_RESOURCES,
+    money: CONFIG.STARTING_MONEY,
     lastChartTotal: 0,
     stepMultiplier: 1,
 
@@ -39,8 +39,8 @@ class StateManager {
   };
 
   // Getters
-  public getResources(): number {
-    return this.state.resources;
+  public getMoney(): number {
+    return this.state.money;
   }
 
   public getOutputValue(): number {
@@ -72,13 +72,13 @@ class StateManager {
     this.state.outputValue = value;
   }
 
-  public addResources(amount: number): void {
-    this.state.resources += amount;
+  public addMoney(amount: number): void {
+    this.state.money += amount;
   }
 
-  public spendResources(amount: number): boolean {
-    if (this.state.resources >= amount) {
-      this.state.resources -= amount;
+  public spendMoney(amount: number): boolean {
+    if (this.state.money >= amount) {
+      this.state.money -= amount;
       return true;
     }
     return false;

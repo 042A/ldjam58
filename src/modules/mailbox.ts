@@ -12,10 +12,18 @@ export class MailboxModule extends BaseModule {
   // State
   private mailHandled = 0;
   private mailSyncing = false;
-  private selectAllPurchased = false;
   private autoMailPurchased = false;
   private instantSyncPurchased = false;
   private autoMailRunning = false;
+  private fasterAutoMailPurchased = false;
+  private doubleMailboxCount = 0;
+  private totalOverhead = 0; // Track total overhead directly instead of retroactive calculation
+  private increaseMailboxPurchased = false;
+
+  // OPM tracking
+  private lastOpmUpdate = Date.now();
+  private lastPrimaryValue = 0;
+  private currentOpm = 0;
 
   // UI Elements
   private mailboxContainer: HTMLDivElement;
@@ -25,7 +33,7 @@ export class MailboxModule extends BaseModule {
   private mailSyncBtn: HTMLButtonElement;
 
   // Callbacks
-  private onResourceChange: ((amount: number) => void) | null = null;
+  private onMoneyChange: ((amount: number) => void) | null = null;
 
   constructor() {
     super("mailbox", true); // Always unlocked
@@ -53,10 +61,24 @@ export class MailboxModule extends BaseModule {
   }
 
   public getMetrics(): ModuleMetrics {
+    const multiplier = CONFIG.MAIL_HANDLED_MULTIPLIER * Math.pow(2, this.doubleMailboxCount);
+
+    // Calculate OPM
+    const now = Date.now();
+    const deltaMinutes = (now - this.lastOpmUpdate) / 60000;
+    if (deltaMinutes >= 0.1) { // Update every 6 seconds
+      const deltaValue = this.totalOverhead - this.lastPrimaryValue;
+      this.currentOpm = deltaValue / deltaMinutes;
+      this.lastOpmUpdate = now;
+      this.lastPrimaryValue = this.totalOverhead;
+    }
+
     return {
       name: "Mailbox",
-      primaryValue: this.mailHandled * CONFIG.MAIL_HANDLED_MULTIPLIER,
+      primaryValue: this.totalOverhead,
       label: `Mails handled: ${this.mailHandled}`,
+      opm: this.currentOpm,
+      multiplier: multiplier,
     };
   }
 
@@ -69,7 +91,8 @@ export class MailboxModule extends BaseModule {
   private updateMailUI(): void {
     const checkboxes = this.getMailCheckboxes();
     const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
-    const remaining = CONFIG.MAIL_TOTAL - checkedCount;
+    const mailTotal = this.increaseMailboxPurchased ? CONFIG.MAIL_TOTAL_UPGRADED : CONFIG.MAIL_TOTAL;
+    const remaining = mailTotal - checkedCount;
 
     if (this.mailSyncing) {
       // During sync, hide everything except sync button
@@ -84,18 +107,11 @@ export class MailboxModule extends BaseModule {
       this.mailReplyBtn.style.display = 'block';
       this.mailSyncBtn.style.display = 'none';
     } else {
-      // Still selecting
-      if (this.selectAllPurchased) {
-        // Show "Select All" action button
-        this.mailSelectAllActionBtn.style.display = 'block';
-        this.mailSelectBtn.style.display = 'none';
-      } else {
-        // Show countdown button
-        this.mailSelectBtn.textContent = `Select ${remaining}...`;
-        this.mailSelectBtn.disabled = true;
-        this.mailSelectBtn.style.display = 'block';
-        this.mailSelectAllActionBtn.style.display = 'none';
-      }
+      // Still selecting - show countdown button
+      this.mailSelectBtn.textContent = `Select ${remaining}...`;
+      this.mailSelectBtn.disabled = true;
+      this.mailSelectBtn.style.display = 'block';
+      this.mailSelectAllActionBtn.style.display = 'none';
       this.mailReplyBtn.style.display = 'none';
       this.mailSyncBtn.style.display = 'none';
     }
@@ -113,6 +129,10 @@ export class MailboxModule extends BaseModule {
 
   private handleReplyAll(): void {
     this.mailHandled += 1;
+
+    // Add overhead based on current multiplier
+    const multiplier = CONFIG.MAIL_HANDLED_MULTIPLIER * Math.pow(2, this.doubleMailboxCount);
+    this.totalOverhead += multiplier;
 
     // If instant sync is purchased, skip the countdown
     if (this.instantSyncPurchased) {
@@ -166,22 +186,19 @@ export class MailboxModule extends BaseModule {
     this.autoMailRunning = true;
     const checkboxes = this.getMailCheckboxes();
 
-    if (this.selectAllPurchased) {
-      // Select all at once
-      await new Promise(resolve => setTimeout(resolve, CONFIG.AUTO_MAIL_CHECK_DELAY_MS));
-      checkboxes.forEach(cb => cb.checked = true);
+    const delay = this.fasterAutoMailPurchased
+      ? CONFIG.AUTO_MAIL_CHECK_DELAY_MS / 2
+      : CONFIG.AUTO_MAIL_CHECK_DELAY_MS;
+
+    // Check each checkbox one by one with delay
+    for (let i = 0; i < checkboxes.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, delay));
+      checkboxes[i].checked = true;
       this.updateMailUI();
-    } else {
-      // Check each checkbox one by one with delay
-      for (let i = 0; i < checkboxes.length; i++) {
-        await new Promise(resolve => setTimeout(resolve, CONFIG.AUTO_MAIL_CHECK_DELAY_MS));
-        checkboxes[i].checked = true;
-        this.updateMailUI();
-      }
     }
 
     // After all are checked, wait a bit and click Reply All
-    await new Promise(resolve => setTimeout(resolve, CONFIG.AUTO_MAIL_CHECK_DELAY_MS));
+    await new Promise(resolve => setTimeout(resolve, delay));
     this.autoMailRunning = false;
     this.handleReplyAll();
   }
@@ -196,7 +213,8 @@ export class MailboxModule extends BaseModule {
     this.mailboxContainer.innerHTML = '';
 
     // Get random selection of mails
-    const selectedMails = this.getRandomMails(CONFIG.MAIL_TOTAL);
+    const mailTotal = this.increaseMailboxPurchased ? CONFIG.MAIL_TOTAL_UPGRADED : CONFIG.MAIL_TOTAL;
+    const selectedMails = this.getRandomMails(mailTotal);
 
     selectedMails.forEach((mail: Mail) => {
       const mailItem = document.createElement('div');
@@ -228,23 +246,11 @@ export class MailboxModule extends BaseModule {
 
   // ----- Public Methods for Upgrades -----
 
-  public purchaseSelectAll(resources: number): boolean {
-    if (resources >= CONFIG.UPGRADE_SELECT_ALL_COST && !this.selectAllPurchased) {
-      this.selectAllPurchased = true;
-      if (this.onResourceChange) {
-        this.onResourceChange(-CONFIG.UPGRADE_SELECT_ALL_COST);
-      }
-      this.updateMailUI();
-      return true;
-    }
-    return false;
-  }
-
-  public purchaseAutoMail(resources: number): boolean {
-    if (resources >= CONFIG.UPGRADE_AUTO_MAIL_COST && !this.autoMailPurchased) {
+  public purchaseAutoMail(money: number): boolean {
+    if (money >= CONFIG.UPGRADE_AUTO_MAIL_COST && !this.autoMailPurchased) {
       this.autoMailPurchased = true;
-      if (this.onResourceChange) {
-        this.onResourceChange(-CONFIG.UPGRADE_AUTO_MAIL_COST);
+      if (this.onMoneyChange) {
+        this.onMoneyChange(-CONFIG.UPGRADE_AUTO_MAIL_COST);
       }
       // Start auto-mail immediately if mailbox is ready
       if (!this.mailSyncing && !this.autoMailRunning) {
@@ -255,12 +261,50 @@ export class MailboxModule extends BaseModule {
     return false;
   }
 
-  public purchaseInstantSync(resources: number): boolean {
-    if (resources >= CONFIG.UPGRADE_INSTANT_SYNC_COST && !this.instantSyncPurchased) {
+  public purchaseInstantSync(money: number): boolean {
+    if (money >= CONFIG.UPGRADE_INSTANT_SYNC_COST && !this.instantSyncPurchased) {
       this.instantSyncPurchased = true;
-      if (this.onResourceChange) {
-        this.onResourceChange(-CONFIG.UPGRADE_INSTANT_SYNC_COST);
+      if (this.onMoneyChange) {
+        this.onMoneyChange(-CONFIG.UPGRADE_INSTANT_SYNC_COST);
       }
+      return true;
+    }
+    return false;
+  }
+
+  public purchaseFasterAutoMail(money: number): boolean {
+    if (money >= CONFIG.UPGRADE_FASTER_AUTO_MAIL_COST && !this.fasterAutoMailPurchased) {
+      this.fasterAutoMailPurchased = true;
+      if (this.onMoneyChange) {
+        this.onMoneyChange(-CONFIG.UPGRADE_FASTER_AUTO_MAIL_COST);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  public purchaseDoubleMailbox(money: number): boolean {
+    const cost = CONFIG.UPGRADE_DOUBLE_MAILBOX_BASE_COST * Math.pow(2, this.doubleMailboxCount);
+
+    if (money >= cost) {
+      this.doubleMailboxCount++;
+      if (this.onMoneyChange) {
+        this.onMoneyChange(-cost);
+      }
+      return true;
+    }
+    return false;
+  }
+
+  public purchaseIncreaseMailbox(money: number): boolean {
+    if (money >= CONFIG.UPGRADE_INCREASE_MAILBOX_COST && !this.increaseMailboxPurchased) {
+      this.increaseMailboxPurchased = true;
+      if (this.onMoneyChange) {
+        this.onMoneyChange(-CONFIG.UPGRADE_INCREASE_MAILBOX_COST);
+      }
+      // Re-render mailbox with new mail count
+      this.renderMailbox();
+      this.updateMailUI();
       return true;
     }
     return false;
@@ -272,10 +316,6 @@ export class MailboxModule extends BaseModule {
     return this.mailHandled;
   }
 
-  public isSelectAllPurchased(): boolean {
-    return this.selectAllPurchased;
-  }
-
   public isAutoMailPurchased(): boolean {
     return this.autoMailPurchased;
   }
@@ -284,7 +324,27 @@ export class MailboxModule extends BaseModule {
     return this.instantSyncPurchased;
   }
 
-  public setOnResourceChange(callback: (amount: number) => void): void {
-    this.onResourceChange = callback;
+  public isFasterAutoMailPurchased(): boolean {
+    return this.fasterAutoMailPurchased;
+  }
+
+  public getDoubleMailboxCount(): number {
+    return this.doubleMailboxCount;
+  }
+
+  public getDoubleMailboxCost(): number {
+    return CONFIG.UPGRADE_DOUBLE_MAILBOX_BASE_COST * Math.pow(2, this.doubleMailboxCount);
+  }
+
+  public isIncreaseMailboxPurchased(): boolean {
+    return this.increaseMailboxPurchased;
+  }
+
+  public setOnMoneyChange(callback: (amount: number) => void): void {
+    this.onMoneyChange = callback;
+  }
+
+  public addOverhead(amount: number): void {
+    this.totalOverhead += amount;
   }
 }

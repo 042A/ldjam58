@@ -20,13 +20,15 @@ export interface ModuleMetrics {
   name: string;
   primaryValue: number;
   label: string;
+  opm?: number; // Overhead per minute
+  multiplier?: number; // Current multiplier
 }
 
 export interface GameState {
   // Legacy counter system (to be removed)
   counters: any[];
   outputValue: number;
-  resources: number;
+  money: number;
   lastChartTotal: number;
   stepMultiplier: number;
 

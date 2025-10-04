@@ -6,7 +6,7 @@ export class DebugManager {
   private isDebugMode = false;
   private debugBtn: HTMLButtonElement;
   private onDebugToggle: ((enabled: boolean) => void)[] = [];
-  private onResourceBoost: (() => void) | null = null;
+  private onMoneyBoost: (() => void) | null = null;
 
   constructor() {
     this.debugBtn = document.getElementById("debugBtn") as HTMLButtonElement;
@@ -25,14 +25,14 @@ export class DebugManager {
     // Notify all listeners
     this.onDebugToggle.forEach(callback => callback(this.isDebugMode));
 
-    // Give huge resource boost when enabling debug mode
-    if (this.isDebugMode && this.onResourceBoost) {
-      this.onResourceBoost();
+    // Give huge money boost when enabling debug mode
+    if (this.isDebugMode && this.onMoneyBoost) {
+      this.onMoneyBoost();
     }
 
     console.log(`Debug mode: ${this.isDebugMode ? "ON" : "OFF"}`);
     if (this.isDebugMode) {
-      console.log("💰 Debug resources granted!");
+      console.log("💰 Debug money granted!");
     }
   }
 
@@ -58,8 +58,8 @@ export class DebugManager {
     this.onDebugToggle.push(callback);
   }
 
-  public onBoostResources(callback: () => void): void {
-    this.onResourceBoost = callback;
+  public onBoostMoney(callback: () => void): void {
+    this.onMoneyBoost = callback;
   }
 
   // Helper to manually unlock modules

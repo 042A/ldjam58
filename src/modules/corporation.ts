@@ -6,6 +6,7 @@ import { BaseModule } from './base-module';
 import { ModuleMetrics, ConsultantDocument } from '../types';
 import { CONFIG } from '../config';
 import { $ } from '../utils/helpers';
+import policiesData from '../policies.json';
 
 const STAKEHOLDER_POOL = [
   "CEO", "CFO", "CTO", "Legal", "HR", "Marketing", "Sales",
@@ -15,25 +16,33 @@ const STAKEHOLDER_POOL = [
 
 export class CorporationModule extends BaseModule {
   // State
+  private isStarted = false;
   private currentDocument: ConsultantDocument | null = null;
   private documentInProgress = false;
   private documentsCompleted = 0;
   private permanentStakeholders: string[] = ["CEO", "CFO", "Legal"];
   private commOfficerCount = 0;
   private documentSpeedMultiplier = 1;
-  private hoursWastedTotal = 0;
+  private doubleCorporationCount = 3;
+  private totalOverhead = 0; // Track total overhead directly
+
+  // OPM tracking
+  private lastOpmUpdate = Date.now();
+  private lastPrimaryValue = 0;
+  private currentOpm = 0;
 
   // UI Elements
   private documentTitle: HTMLParagraphElement;
   private signatureProgress: HTMLDivElement;
   private documentInfo: HTMLParagraphElement;
-  private addStakeholderBtn: HTMLButtonElement;
   private scopeCreepValue: HTMLSpanElement;
   private scopeCreepBar: HTMLDivElement;
   private hoursWasted: HTMLParagraphElement;
+  private startCorporationBtn: HTMLButtonElement;
+  private documentStatus: HTMLDivElement;
 
   // Callbacks
-  private onResourceChange: ((amount: number) => void) | null = null;
+  private onMoneyChange: ((amount: number) => void) | null = null;
 
   constructor() {
     super("overheadManager", false); // Locked initially
@@ -42,17 +51,34 @@ export class CorporationModule extends BaseModule {
     this.documentTitle = $<HTMLParagraphElement>("documentTitle");
     this.signatureProgress = $<HTMLDivElement>("signatureProgress");
     this.documentInfo = $<HTMLParagraphElement>("documentInfo");
-    this.addStakeholderBtn = $<HTMLButtonElement>("addStakeholderBtn");
     this.scopeCreepValue = $<HTMLSpanElement>("scopeCreepValue");
     this.scopeCreepBar = $<HTMLDivElement>("scopeCreepBar");
     this.hoursWasted = $<HTMLParagraphElement>("hoursWasted");
+    this.startCorporationBtn = $<HTMLButtonElement>("startCorporationBtn");
+    this.documentStatus = $<HTMLDivElement>("documentStatus");
   }
 
   public init(): void {
     // Event listeners
-    this.addStakeholderBtn.addEventListener("click", () => this.addStakeholder());
+    this.startCorporationBtn.addEventListener("click", () => this.startMinigame());
+  }
 
-    // Start first document automatically
+  private startMinigame(): void {
+    if (this.isStarted) return;
+
+    this.isStarted = true;
+    this.startCorporationBtn.style.display = 'none';
+    this.documentStatus.style.display = 'block';
+
+    // Show corporation upgrades
+    const stakeholderRow = document.getElementById('upgradeStakeholderRow');
+    const doubleCorporationRow = document.getElementById('upgradeDoubleCorporationRow');
+    const commOfficerRow = document.getElementById('upgradeCommOfficerRow');
+    if (stakeholderRow) stakeholderRow.style.display = 'table-row';
+    if (doubleCorporationRow) doubleCorporationRow.style.display = 'table-row';
+    if (commOfficerRow) commOfficerRow.style.display = 'table-row';
+
+    // Start first document
     this.currentDocument = this.createNewDocument();
     this.documentInProgress = true;
     this.updateDocumentUI();
@@ -64,18 +90,37 @@ export class CorporationModule extends BaseModule {
   }
 
   public getMetrics(): ModuleMetrics {
+    const multiplier = Math.pow(2, this.doubleCorporationCount);
+
+    // Calculate OPM
+    const now = Date.now();
+    const deltaMinutes = (now - this.lastOpmUpdate) / 60000;
+    if (deltaMinutes >= 0.1) { // Update every 6 seconds
+      const deltaValue = this.totalOverhead - this.lastPrimaryValue;
+      this.currentOpm = deltaValue / deltaMinutes;
+      this.lastOpmUpdate = now;
+      this.lastPrimaryValue = this.totalOverhead;
+    }
+
     return {
       name: "Corporation",
-      primaryValue: this.hoursWastedTotal,
-      label: `Hours wasted: ${this.hoursWastedTotal}`,
+      primaryValue: this.totalOverhead,
+      label: `Documents completed: ${this.documentsCompleted}`,
+      opm: this.currentOpm,
+      multiplier: multiplier,
     };
   }
 
   // ----- Document Logic -----
 
+  private getRandomPolicy(): string {
+    const randomIndex = Math.floor(Math.random() * policiesData.length);
+    return policiesData[randomIndex].title;
+  }
+
   private createNewDocument(): ConsultantDocument {
     return {
-      title: "Best Practices Framework for Best Practices",
+      title: this.getRandomPolicy(),
       version: "v1.2.3",
       signatories: [...this.permanentStakeholders],
       currentSignatureIndex: 0,
@@ -140,29 +185,33 @@ export class CorporationModule extends BaseModule {
     // Check if scope creep maxed out
     if (doc.scopeCreep >= CONFIG.SCOPE_CREEP_MAX) {
       // Calculate hours wasted based on stakeholders
-      const hoursWasted = doc.signatories.length * 40; // 40 hours per stakeholder
+      const baseHoursWasted = doc.signatories.length * 100; // 40 hours per stakeholder
+      const multiplier = Math.pow(2, this.doubleCorporationCount);
+      const hoursWasted = baseHoursWasted * multiplier;
 
       // Show blinking hours wasted message
       this.hoursWasted.textContent = `⚠️ ${hoursWasted} hours wasted! ⚠️`;
       this.hoursWasted.style.display = 'block';
       this.hoursWasted.style.animation = 'blink 1s infinite';
 
-      // Wait a bit before resetting
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // Give reward and start new document
-      if (this.onResourceChange) {
-        this.onResourceChange(1000);
+      // Give reward and add overhead
+      if (this.onMoneyChange) {
+        this.onMoneyChange(1000);
       }
       this.documentsCompleted++;
-      this.hoursWastedTotal += hoursWasted; // Track total hours wasted for counter calculation
+      this.totalOverhead += hoursWasted;
 
-      // Hide message and start new document
-      this.hoursWasted.style.display = 'none';
-
+      // Start new document immediately (don't wait)
       this.currentDocument = this.createNewDocument();
       this.documentInProgress = true;
       this.updateDocumentUI();
+
+      // Hide message after a delay (but don't block processing)
+      setTimeout(() => {
+        this.hoursWasted.style.display = 'none';
+      }, 2000);
+
+      // Continue processing new document
       this.processDocument();
     } else {
       // Continue processing
@@ -188,9 +237,9 @@ export class CorporationModule extends BaseModule {
       // Adding stakeholders increases scope creep significantly
       doc.scopeCreep = Math.min(doc.scopeCreep + 10, CONFIG.SCOPE_CREEP_MAX);
 
-      // Deduct resources
-      if (this.onResourceChange) {
-        this.onResourceChange(-CONFIG.ADD_STAKEHOLDER_COST);
+      // Deduct money
+      if (this.onMoneyChange) {
+        this.onMoneyChange(-CONFIG.ADD_STAKEHOLDER_COST);
       }
 
       this.updateDocumentUI();
@@ -199,32 +248,76 @@ export class CorporationModule extends BaseModule {
 
   // ----- Public Methods for Upgrades -----
 
-  public purchaseCommOfficer(resources: number): boolean {
-    const cost = CONFIG.UPGRADE_COMM_OFFICER_BASE_COST * Math.pow(2, this.commOfficerCount);
+  public purchaseStakeholder(money: number): boolean {
+    if (!this.isStarted || !this.currentDocument || !this.documentInProgress) return false;
 
-    if (resources >= cost) {
-      this.commOfficerCount++;
-      this.documentSpeedMultiplier *= 2;
-      if (this.onResourceChange) {
-        this.onResourceChange(-cost);
+    if (money >= CONFIG.ADD_STAKEHOLDER_COST) {
+      const doc = this.currentDocument;
+      const availableStakeholders = STAKEHOLDER_POOL.filter(s => !this.permanentStakeholders.includes(s));
+
+      if (availableStakeholders.length > 0) {
+        const newStakeholder = availableStakeholders[Math.floor(Math.random() * availableStakeholders.length)];
+
+        // Add to permanent stakeholders (persists across documents)
+        this.permanentStakeholders.push(newStakeholder);
+
+        // Also add to current document
+        doc.signatories.push(newStakeholder);
+
+        // Adding stakeholders increases scope creep significantly
+        doc.scopeCreep = Math.min(doc.scopeCreep + 10, CONFIG.SCOPE_CREEP_MAX);
+
+        // Deduct money
+        if (this.onMoneyChange) {
+          this.onMoneyChange(-CONFIG.ADD_STAKEHOLDER_COST);
+        }
+
+        this.updateDocumentUI();
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public purchaseDoubleCorporation(money: number): boolean {
+    const cost = CONFIG.UPGRADE_DOUBLE_CORPORATION_BASE_COST * Math.pow(2, this.doubleCorporationCount);
+
+    if (money >= cost) {
+      this.doubleCorporationCount++;
+      if (this.onMoneyChange) {
+        this.onMoneyChange(-cost);
       }
       return true;
     }
     return false;
   }
 
-  public canPurchaseStakeholder(resources: number): boolean {
-    return resources >= CONFIG.ADD_STAKEHOLDER_COST;
+  public purchaseCommOfficer(money: number): boolean {
+    const cost = CONFIG.UPGRADE_COMM_OFFICER_BASE_COST * Math.pow(2, this.commOfficerCount);
+
+    if (money >= cost) {
+      this.commOfficerCount++;
+      this.documentSpeedMultiplier *= 2;
+      if (this.onMoneyChange) {
+        this.onMoneyChange(-cost);
+      }
+      return true;
+    }
+    return false;
   }
 
   public getCommOfficerCost(): number {
     return CONFIG.UPGRADE_COMM_OFFICER_BASE_COST * Math.pow(2, this.commOfficerCount);
   }
 
+  public getDoubleCorporationCost(): number {
+    return CONFIG.UPGRADE_DOUBLE_CORPORATION_BASE_COST * Math.pow(2, this.doubleCorporationCount);
+  }
+
   // ----- Getters -----
 
-  public getHoursWastedTotal(): number {
-    return this.hoursWastedTotal;
+  public getDoubleCorporationCount(): number {
+    return this.doubleCorporationCount;
   }
 
   public getCommOfficerCount(): number {
@@ -235,7 +328,7 @@ export class CorporationModule extends BaseModule {
     return this.documentSpeedMultiplier;
   }
 
-  public setOnResourceChange(callback: (amount: number) => void): void {
-    this.onResourceChange = callback;
+  public setOnMoneyChange(callback: (amount: number) => void): void {
+    this.onMoneyChange = callback;
   }
 }
