@@ -134,6 +134,12 @@ export class MailboxModule extends BaseModule {
     const multiplier = CONFIG.MAIL_HANDLED_MULTIPLIER * Math.pow(2, this.doubleMailboxCount);
     this.totalOverhead += multiplier;
 
+    // Give money using logarithmic scaling: money = overhead / log10(totalOverhead + 10)
+    const moneyEarned = Math.floor(multiplier / Math.log10(this.totalOverhead + 10));
+    if (this.onMoneyChange && moneyEarned > 0) {
+      this.onMoneyChange(moneyEarned);
+    }
+
     // If instant sync is purchased, skip the countdown
     if (this.instantSyncPurchased) {
       this.resetMailbox();

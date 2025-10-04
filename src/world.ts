@@ -28,6 +28,10 @@ export class WorldModule extends BaseModule {
   private avgContactsPerPerson = 1;
   private totalEmailsSent = 0;
 
+  // Upgrade counts for cost calculation
+  private worldMailCount = 0;
+  private worldContactCount = 0;
+
   // OPM tracking
   private lastOpmUpdate = Date.now();
   private lastPrimaryValue = 0;
@@ -40,6 +44,9 @@ export class WorldModule extends BaseModule {
   private treeEl: HTMLElement;
   private startBtn: HTMLButtonElement;
   private worldContent: HTMLElement;
+
+  // Callbacks
+  private onMoneyChange: ((amount: number) => void) | null = null;
 
   // Animation
   private animationFrame: number | null = null;
@@ -109,14 +116,52 @@ export class WorldModule extends BaseModule {
     this.animate();
   }
 
-  public addMail(): void {
-    this.mailsPerSecond++;
-    this.updateDisplay();
+  public purchaseWorldMail(money: number): boolean {
+    const cost = this.getWorldMailCost();
+    if (money >= cost) {
+      this.worldMailCount++;
+      this.mailsPerSecond++;
+      if (this.onMoneyChange) {
+        this.onMoneyChange(-cost);
+      }
+      this.updateDisplay();
+      return true;
+    }
+    return false;
   }
 
-  public addContact(): void {
-    this.avgContactsPerPerson++;
-    this.updateDisplay();
+  public purchaseWorldContact(money: number): boolean {
+    const cost = this.getWorldContactCost();
+    if (money >= cost) {
+      this.worldContactCount++;
+      this.avgContactsPerPerson++;
+      if (this.onMoneyChange) {
+        this.onMoneyChange(-cost);
+      }
+      this.updateDisplay();
+      return true;
+    }
+    return false;
+  }
+
+  public getWorldMailCost(): number {
+    return CONFIG.UPGRADE_WORLD_MAIL_BASE_COST * Math.pow(2, this.worldMailCount);
+  }
+
+  public getWorldContactCost(): number {
+    return CONFIG.UPGRADE_WORLD_CONTACT_BASE_COST * Math.pow(2, this.worldContactCount);
+  }
+
+  public getWorldMailCount(): number {
+    return this.worldMailCount;
+  }
+
+  public getWorldContactCount(): number {
+    return this.worldContactCount;
+  }
+
+  public setOnMoneyChange(callback: (amount: number) => void): void {
+    this.onMoneyChange = callback;
   }
 
   private updateDisplay(): void {

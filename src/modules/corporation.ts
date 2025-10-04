@@ -185,7 +185,7 @@ export class CorporationModule extends BaseModule {
     // Check if scope creep maxed out
     if (doc.scopeCreep >= CONFIG.SCOPE_CREEP_MAX) {
       // Calculate hours wasted based on stakeholders
-      const baseHoursWasted = doc.signatories.length * 100; // 40 hours per stakeholder
+      const baseHoursWasted = doc.signatories.length * 100; // 100 hours per stakeholder
       const multiplier = Math.pow(2, this.doubleCorporationCount);
       const hoursWasted = baseHoursWasted * multiplier;
 
@@ -194,12 +194,15 @@ export class CorporationModule extends BaseModule {
       this.hoursWasted.style.display = 'block';
       this.hoursWasted.style.animation = 'blink 1s infinite';
 
-      // Give reward and add overhead
-      if (this.onMoneyChange) {
-        this.onMoneyChange(1000);
+      // Add overhead first
+      this.totalOverhead += hoursWasted;
+
+      // Give money using logarithmic scaling: money = overhead / log10(totalOverhead + 10)
+      const moneyEarned = Math.floor(hoursWasted / Math.log10(this.totalOverhead + 10));
+      if (this.onMoneyChange && moneyEarned > 0) {
+        this.onMoneyChange(moneyEarned);
       }
       this.documentsCompleted++;
-      this.totalOverhead += hoursWasted;
 
       // Start new document immediately (don't wait)
       this.currentDocument = this.createNewDocument();

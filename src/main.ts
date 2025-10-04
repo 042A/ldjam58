@@ -71,13 +71,14 @@ function checkModuleUnlocks(overhead: number): void {
       winModule.classList.remove("locked");
       console.log("You win!");
 
-      // Hide all other modules
+      // Hide all modules and top bar
       const mailbox = document.getElementById("mailbox");
       const corporation = document.getElementById("overheadManager");
       const world = document.getElementById("world");
       const counterModule = document.getElementById("counterModule");
       const upgrades = document.getElementById("upgrades");
       const progressModule = document.getElementById("progressModule");
+      const topBar = document.querySelector(".top-bar") as HTMLElement;
 
       if (mailbox) mailbox.style.display = 'none';
       if (corporation) corporation.style.display = 'none';
@@ -85,6 +86,7 @@ function checkModuleUnlocks(overhead: number): void {
       if (counterModule) counterModule.style.display = 'none';
       if (upgrades) upgrades.style.display = 'none';
       if (progressModule) progressModule.style.display = 'none';
+      if (topBar) topBar.style.display = 'none';
     }
   }
 }
@@ -107,11 +109,11 @@ function updateProgress(total: number): void {
     percent = (progress / rangeSize) * 100;
     levelText = `Level 2: ${Math.floor(total).toLocaleString()} / 2M`;
   } else {
-    // Level 3: 2M -> 10T
+    // Level 3: 2M -> 100B
     const rangeSize = CONFIG.WIN_THRESHOLD - CONFIG.MODULE_3_THRESHOLD;
     const progress = total - CONFIG.MODULE_3_THRESHOLD;
     percent = (progress / rangeSize) * 100;
-    levelText = `Level 3: ${Math.floor(total).toLocaleString()} / 10T`;
+    levelText = `Level 3: ${Math.floor(total).toLocaleString()} / 100B`;
   }
 
   percent = clamp(percent, 0, 100);
@@ -171,6 +173,23 @@ function renderUI(): number {
   // Check for module unlocks
   checkModuleUnlocks(outputValue);
 
+  // Show/hide modules based on overhead thresholds (only if game not won)
+  if (!gameState.isWinModuleShown()) {
+    const upgradesModule = document.getElementById("upgrades");
+    const progressModule = document.getElementById("progressModule");
+    const counterModule = document.getElementById("counterModule");
+
+    if (upgradesModule && outputValue >= CONFIG.UPGRADES_MODULE_THRESHOLD) {
+      upgradesModule.style.display = '';
+    }
+    if (progressModule && outputValue >= CONFIG.PROGRESS_MODULE_THRESHOLD) {
+      progressModule.style.display = '';
+    }
+    if (counterModule && outputValue >= CONFIG.COUNTER_MODULE_THRESHOLD) {
+      counterModule.style.display = '';
+    }
+  }
+
   // Show/hide upgrades based on overhead thresholds
   const autoMailRow = document.getElementById("upgradeAutoMailRow");
   const fasterAutoMailRow = document.getElementById("upgradeFasterAutoMailRow");
@@ -196,19 +215,19 @@ function renderUI(): number {
 
   // Update auto-mail upgrade button
   if (mailboxModule.isAutoMailPurchased()) {
-    UI.upgradeAutoMailBtn.textContent = "Auto-Mail: Active";
+    UI.upgradeAutoMailBtn.textContent = "Intern: Active";
     UI.upgradeAutoMailBtn.disabled = true;
   } else {
-    UI.upgradeAutoMailBtn.textContent = `Auto-Mail System ($${CONFIG.UPGRADE_AUTO_MAIL_COST})`;
+    UI.upgradeAutoMailBtn.textContent = `Intern ad ($${CONFIG.UPGRADE_AUTO_MAIL_COST})`;
     UI.upgradeAutoMailBtn.disabled = gameState.getMoney() < CONFIG.UPGRADE_AUTO_MAIL_COST;
   }
 
   // Update faster auto-mail upgrade button
   if (mailboxModule.isFasterAutoMailPurchased()) {
-    UI.upgradeFasterAutoMailBtn.textContent = "Faster Auto-Mail: Active";
+    UI.upgradeFasterAutoMailBtn.textContent = "No breaks: Active";
     UI.upgradeFasterAutoMailBtn.disabled = true;
   } else {
-    UI.upgradeFasterAutoMailBtn.textContent = `Faster Auto-Mail ($${CONFIG.UPGRADE_FASTER_AUTO_MAIL_COST})`;
+    UI.upgradeFasterAutoMailBtn.textContent = `No breaks for intern ($${CONFIG.UPGRADE_FASTER_AUTO_MAIL_COST})`;
     UI.upgradeFasterAutoMailBtn.disabled = gameState.getMoney() < CONFIG.UPGRADE_FASTER_AUTO_MAIL_COST;
   }
 
@@ -251,9 +270,13 @@ function renderUI(): number {
   UI.upgradeCommOfficerBtn.textContent = `Hire Comm Officer ($${commOfficerCost}) [${corporationModule.getCommOfficerCount()}x, ${corporationModule.getDocumentSpeedMultiplier()}x speed]`;
   UI.upgradeCommOfficerBtn.disabled = gameState.getMoney() < commOfficerCost;
 
-  // Update world upgrades (no cost tracking needed, they're free actions)
-  UI.upgradeWorldMailBtn.textContent = `+1 Mail/sec`;
-  UI.upgradeWorldContactBtn.textContent = `+1 Contact/person`;
+  // Update world upgrades
+  const worldMailCost = worldModule.getWorldMailCost();
+  const worldContactCost = worldModule.getWorldContactCost();
+  UI.upgradeWorldMailBtn.textContent = `+1 Mail/sec ($${worldMailCost.toLocaleString()}) [${worldModule.getWorldMailCount()}]`;
+  UI.upgradeWorldMailBtn.disabled = gameState.getMoney() < worldMailCost;
+  UI.upgradeWorldContactBtn.textContent = `+1 Contact/person ($${worldContactCost.toLocaleString()}) [${worldModule.getWorldContactCount()}]`;
+  UI.upgradeWorldContactBtn.disabled = gameState.getMoney() < worldContactCost;
 
   return outputValue;
 }
@@ -326,13 +349,19 @@ function tryUpgradeCommOfficer(): void {
 }
 
 function tryUpgradeWorldMail(): void {
-  worldModule.addMail();
-  renderUI();
+  if (worldModule.purchaseWorldMail(gameState.getMoney())) {
+    renderUI();
+  } else {
+    alert("Not enough money!");
+  }
 }
 
 function tryUpgradeWorldContact(): void {
-  worldModule.addContact();
-  renderUI();
+  if (worldModule.purchaseWorldContact(gameState.getMoney())) {
+    renderUI();
+  } else {
+    alert("Not enough money!");
+  }
 }
 
 // -----------------------------
@@ -377,7 +406,7 @@ debugManager.onToggle((enabled) => {
 const addOverheadBtn = document.getElementById("addOverheadBtn");
 if (addOverheadBtn) {
   addOverheadBtn.addEventListener("click", () => {
-    mailboxModule.addOverhead(200000);
+    mailboxModule.addOverhead(20000000000);
     renderUI();
   });
 }
@@ -399,6 +428,7 @@ UI.upgradeWorldContactBtn.addEventListener("click", tryUpgradeWorldContact);
 // Wire up module money callbacks
 mailboxModule.setOnMoneyChange((amount) => gameState.addMoney(amount));
 corporationModule.setOnMoneyChange((amount) => gameState.addMoney(amount));
+worldModule.setOnMoneyChange((amount) => gameState.addMoney(amount));
 
 // -----------------------------
 // Game Start

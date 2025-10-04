@@ -28,11 +28,16 @@ export const CONFIG = {
   AUTO_MAIL_CHECK_DELAY_MS: 50,
 
   // Upgrades - Module 1
-  UPGRADE_AUTO_MAIL_COST: 1000,
-  UPGRADE_INSTANT_SYNC_COST: 2000,
-  UPGRADE_FASTER_AUTO_MAIL_COST: 1500,
-  UPGRADE_DOUBLE_MAILBOX_BASE_COST: 500,
+  UPGRADE_AUTO_MAIL_COST: 100,
+  UPGRADE_INSTANT_SYNC_COST: 200,
+  UPGRADE_FASTER_AUTO_MAIL_COST: 150,
+  UPGRADE_DOUBLE_MAILBOX_BASE_COST: 200,
   UPGRADE_INCREASE_MAILBOX_COST: 1000,
+
+  // Module visibility thresholds (based on total overhead)
+  UPGRADES_MODULE_THRESHOLD: 200,
+  PROGRESS_MODULE_THRESHOLD: 1500,
+  COUNTER_MODULE_THRESHOLD: 201000,
 
   // Upgrade visibility thresholds (based on total overhead)
   UPGRADE_AUTO_MAIL_THRESHOLD: 200,
@@ -46,6 +51,10 @@ export const CONFIG = {
   UPGRADE_COMM_OFFICER_BASE_COST: 500,
   UPGRADE_DOUBLE_CORPORATION_BASE_COST: 1000,
 
+  // Upgrades - Module 3 (World)
+  UPGRADE_WORLD_MAIL_BASE_COST: 100,
+  UPGRADE_WORLD_CONTACT_BASE_COST: 200,
+
   // Upgrades - Global
   UPGRADE_STEP_COST: 500,
 
@@ -57,7 +66,7 @@ export const CONFIG = {
   // Module unlock thresholds
   MODULE_2_THRESHOLD: 200_000, // Corporation unlocks at 200k overhead
   MODULE_3_THRESHOLD: 2_000_000, // World unlocks at 2M overhead
-  WIN_THRESHOLD: 10_000_000_000_000, // Win at 10 trillion
+  WIN_THRESHOLD: 100_000_000_000, // Win at 100 billion
 
   // Counter multipliers (for overhead calculation)
   MAIL_HANDLED_MULTIPLIER: 50,
