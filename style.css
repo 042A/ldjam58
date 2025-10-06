@@ -30,7 +30,7 @@ body {
 }
 .module-collection {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: 20px;
   padding: 20px;
 }
@@ -41,6 +41,10 @@ body {
   border-radius: 5px;
   grid-column: span 2; /* Each module takes 2 columns */
   position: relative; /* key: overlay stays inside this box */
+}
+
+.module-wide {
+  grid-column: span 4; /* Wide modules take 4 columns */
 }
 
 /* Hide locked modules by default */
