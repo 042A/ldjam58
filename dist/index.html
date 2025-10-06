@@ -4,20 +4,30 @@
 <head>
     <meta charset="UTF-8">
     <title>Reply All - The Game</title>
-  <script type="module" crossorigin src="/assets/index-CXxtvl0a.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-DzGlBFg7.css">
+  <script type="module" crossorigin src="/assets/index-BVWMulWN.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-xgxnl2UR.css">
 </head>
 
 <body>
     <div id="app">
-
-        <!-- The only two numbers ya need -->
-        <div class="top-bar">
-            <h2 id="total"></h2>
-            <button style="display:none" id="debugBtn" style="margin-left: 20px; padding: 5px 10px;">Debug Mode</button>
-            <button  id="addOverheadBtn" style="margin-left: 10px; padding: 5px 10px;">+200k Overhead</button>
+        <div class="top-bar-wrapper">
+            <!-- The only two numbers ya need -->
+            <div class="top-bar" style="display: flex; justify-content: space-between; align-items: center; gap: 20px;">
+                <div style="flex: 1;">
+                    <p id="total"></p>
+                </div>
+                <div id="statusMessages" style="flex: 1; text-align: center; position: relative;">
+                    <div id="currentMessage" style="font-weight: bold;"></div>
+                    <div id="previousMessage" style="opacity: 0.2; font-size: 0.9em;"></div>
+                </div>
+                <div style="flex: 1; text-align: right;">
+                    <button style="display: none;" id="debugBtn">Debug Mode</button>
+                    <button style="display: none;" id="addOverheadBtn">+200k Overhead</button>
+                </div>
+            </div>
         </div>
 
+        <div style="height: 120px;"></div>
         <!-- Collection of spawned modules -->
         <div class="module-collection">
 
@@ -26,7 +36,7 @@
 
             <div id="mailbox" class="module">
                 <h4>Your mailbox</h4>
-                <p>The foundation for creating value.</p>
+                <p>Where communication turns into value.</p>
 
                 <div id="mailboxContainer" class="mailbox">
                     <!-- Mails will be dynamically loaded from mails.json -->
@@ -38,8 +48,8 @@
             </div>
 
             <div class="module locked" id="overheadManager">
-                <h4>Corporation communications</h4>
-                <p>Company CEO wants you create an efficient workplace. Create proposal and email stakeholders.</p>
+                <h4>Executive Leaderboard Sync</h4>
+                <p>Create a management proposal and email it to the stakeholders.</p>
 
                 <button id="startCorporationBtn">Create proposal</button>
 
@@ -96,11 +106,11 @@
 
 
             <div id="upgrades" class="module" style="display: none;">
-                <h4>Upgrades</h4>
+                <h4>Implement new strategy</h4>
                 <table style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr style="border-bottom: 2px solid #333;">
-                            <th style="text-align: left; padding: 8px; width: 40%;">Store</th>
+                            <th style="text-align: left; padding: 8px; width: 40%;">Project</th>
                             <th style="text-align: left; padding: 8px; width: 60%;">Description</th>
                         </tr>
                     </thead>

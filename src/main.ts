@@ -10,7 +10,7 @@ import { DebugManager } from './utils/debug';
 import { ChartSystem } from './systems/chart-system';
 import { MailboxModule } from './modules/mailbox';
 import { CorporationModule } from './modules/corporation';
-import { WorldModule } from './world';
+import { WorldModule } from './modules/world';
 import { gameState } from './state';
 
 // -----------------------------
@@ -169,6 +169,7 @@ function renderUI(): number {
   UI.totalEl.textContent = `Total overhead: ${Math.floor(outputValue)}h | Money: $${Math.floor(gameState.getMoney())}`;
   updateProgress(outputValue);
   renderModuleStats();
+  updateStatusMessage(outputValue);
 
   // Check for module unlocks
   checkModuleUnlocks(outputValue);
@@ -429,6 +430,62 @@ UI.upgradeWorldContactBtn.addEventListener("click", tryUpgradeWorldContact);
 mailboxModule.setOnMoneyChange((amount) => gameState.addMoney(amount));
 corporationModule.setOnMoneyChange((amount) => gameState.addMoney(amount));
 worldModule.setOnMoneyChange((amount) => gameState.addMoney(amount));
+
+// -----------------------------
+// Status Message System
+// -----------------------------
+interface StatusMessage {
+  threshold: number;
+  message: string;
+}
+
+const statusMessages: StatusMessage[] = [
+  { threshold: 0, message: "A new day at the office!" },
+  { threshold: 200, message: "Your coworkers praise your dedication!" },
+  { threshold: 500, message: "The IT department installs a new mail server to handle growing demand." },
+  { threshold: 1200, message: "Overtime has been approved for your department." },
+  { threshold: 2000, message: "HR is recruiting project managers for your department." },
+  { threshold: 5000, message: "HR is hiring middle management to ease your workload." },
+  { threshold: 10000, message: "The IT department invests in email supercomputers." },
+  { threshold: 50000, message: "People are sleeping at the office to keep up with the emails." },
+  { threshold: 100000, message: "You’re getting noticed by the suits on the top floor." },
+  { threshold: 200000, message: "CONGRATULATIONS! You’ve been promoted!" },
+  { threshold: 500000, message: "The CFO enjoyed the latest project kickoff in Dubai." },
+  { threshold: 700000, message: "A lifetime of wasted hours." },
+  { threshold: 2000000, message: "Your hard work is recognized by the United Nations." },
+  { threshold: 10000000, message: "AI data centers are being repurposed as mail servers." },
+  { threshold: 100000000, message: "Researchers establish a direct neural link between emails and the frontal lobe." },
+  { threshold: 90000000000, message: "The system is overwhelmed..." },
+];
+
+
+let lastMessageIndex = -1;
+
+function updateStatusMessage(overhead: number): void {
+  const currentMessageEl = document.getElementById("currentMessage");
+  const previousMessageEl = document.getElementById("previousMessage");
+  if (!currentMessageEl || !previousMessageEl) return;
+
+  // Find the highest threshold message that we've reached
+  let messageIndex = -1;
+  for (let i = statusMessages.length - 1; i >= 0; i--) {
+    if (overhead >= statusMessages[i].threshold) {
+      messageIndex = i;
+      break;
+    }
+  }
+
+  // Update if we've reached a new message
+  if (messageIndex !== lastMessageIndex && messageIndex >= 0) {
+    const previousMessage = lastMessageIndex >= 0 ? statusMessages[lastMessageIndex].message : "";
+    const currentMessage = statusMessages[messageIndex].message;
+
+    previousMessageEl.textContent = previousMessage;
+    currentMessageEl.textContent = currentMessage;
+
+    lastMessageIndex = messageIndex;
+  }
+}
 
 // -----------------------------
 // Game Start

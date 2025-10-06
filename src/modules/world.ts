@@ -2,9 +2,9 @@
 // Module 3: World Overhead Task Force
 // -----------------------------
 
-import { BaseModule } from './modules/base-module';
-import { ModuleMetrics } from './types';
-import { CONFIG } from './config';
+import { BaseModule } from './base-module';
+import { ModuleMetrics } from '../types';
+import { CONFIG } from '../config';
 
 interface AnimatedDot {
   progress: number; // 0-1 along the path

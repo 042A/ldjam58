@@ -37,7 +37,7 @@ export const CONFIG = {
   // Module visibility thresholds (based on total overhead)
   UPGRADES_MODULE_THRESHOLD: 200,
   PROGRESS_MODULE_THRESHOLD: 1500,
-  COUNTER_MODULE_THRESHOLD: 201000,
+  COUNTER_MODULE_THRESHOLD: 20199999000,
 
   // Upgrade visibility thresholds (based on total overhead)
   UPGRADE_AUTO_MAIL_THRESHOLD: 200,
